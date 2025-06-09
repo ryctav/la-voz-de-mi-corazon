@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>La voz que sale de mi corazón</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #fff8f0;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: none;
+      background-color: #e06c75;
+      color: white;
+      cursor: pointer;
+    }
+    button:disabled {
+      background-color: #ccc;
+    }
+    audio {
+      margin-top: 20px;
+      width: 100%;
+    }
+    #qr-container {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>❤️ La voz que sale de mi corazón</h1>
+  <p>Presiona el botón para grabar tu mensaje</p>
+  <button id="recordBtn">Grabar</button>
+  <button id="stopBtn" disabled>Detener</button>
+
+  <audio id="audioPlayer" controls hidden></audio>
+  <button id="confirmBtn" hidden>Confirmar audio</button>
+
+  <div id="qr-container" hidden>
+    <h3>Escanea para escuchar tu mensaje:</h3>
+    <canvas id="qr"></canvas>
+  </div>
+
+  <script>
+    let mediaRecorder;
+    let recordedChunks = [];
+    const recordBtn = document.getElementById("recordBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const audioPlayer = document.getElementById("audioPlayer");
+    const confirmBtn = document.getElementById("confirmBtn");
+    const qrContainer = document.getElementById("qr-container");
+    const qr = new QRious({ element: document.getElementById("qr"), size: 250 });
+
+    recordBtn.onclick = async () => {
+      recordedChunks = [];
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: "audio/webm" });
+        const url = URL.createObjectURL(blob);
+        audioPlayer.src = url;
+        audioPlayer.hidden = false;
+        confirmBtn.hidden = false;
+      };
+
+      mediaRecorder.start();
+      recordBtn.disabled = true;
+      stopBtn.disabled = false;
+    };
+
+    stopBtn.onclick = () => {
+      mediaRecorder.stop();
+      recordBtn.disabled = false;
+      stopBtn.disabled = true;
+    };
+
+    confirmBtn.onclick = () => {
+      const blob = new Blob(recordedChunks, { type: "audio/webm" });
+      const audioFileName = prompt("Ingresa el nombre del archivo (sin espacios):", "mi_audio");
+      if (!audioFileName) return;
+      const audioUrl = `https://your-site-name.netlify.app/audios/${audioFileName}.webm`;
+
+      // Mostrar QR
+      qr.set({ value: audioUrl });
+      qrContainer.hidden = false;
+
+      // Descargar el archivo
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${audioFileName}.webm`;
+      a.click();
+    };
+  </script>
+</body>
+</html>
